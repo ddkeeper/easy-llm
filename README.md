@@ -1,4 +1,4 @@
-# CS 336 从 0 到 1 搭建大模型
+# 跟着 stanford 动手学大模型
 
 本系列以斯坦福（Stanford）大学公开课 **CS 336: Language Modeling from Scratch** 为基底，以初学者友好、内容聚焦、讲解接地气的方式，介绍现代大语言模型的原理与代码实现。
 
