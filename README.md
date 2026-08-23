@@ -66,4 +66,4 @@ jupyter notebook
 - [CS 336 课程官网](https://cs336.stanford.edu/)
 - [CS 336 课程回放（2026 春季）](https://www.youtube.com/watch?v=JuoVZkPBiKk&list=PLoROMvodv4rMqXOcazWaTUHhq-yembLCV)
 - [CS 336 课程作业文档](https://github.com/stanford-cs336)
-- Let's reproduce GPT-2 (124M) — Andrej Karpathy
+- [Let's reproduce GPT-2 (124M) — Andrej Karpathy](https://www.youtube.com/watch?v=l8pRSuU81PU)
