@@ -39,10 +39,30 @@ easy-llm/
 │   ├── 1.2_tensor基本运算.ipynb  # Tensor 核心运算详解
 │   ├── 1.3_基础模块.ipynb        # Transformer 基础模块实现
 │   └── 1.4_前置归一化块.ipynb    # Pre-LayerNorm 块实现
-└── CLAUDE.md                      # 项目文档制作规范
+└── environment.yml                # Conda 环境配置文件
+```
+
+## 环境配置
+
+本项目运行环境为 Conda（推荐使用 [Miniconda](https://docs.anaconda.com/miniconda/)），Python 3.10 + PyTorch 2.5（CUDA 12.1）。
+
+```bash
+# 1. 安装 Miniconda（如已安装可跳过）
+#    下载地址：https://docs.anaconda.com/miniconda/
+#    安装完成后打开终端（Anaconda Prompt 或系统终端）
+
+# 2. 基于 environment.yml 创建环境
+conda env create -f environment.yml
+
+# 3. 激活环境
+conda activate nanogpt
+
+# 4. 运行代码（以 Jupyter Notebook 为例）
+jupyter notebook
 ```
 
 ## 参考资料
-
-- 斯坦福 CS 336 课程作业 PDF（assignment1-basics 等）
-- `assignment1-basics/cs336_basics` 目录下的分节脚本与代码注释
+大模型优质资源参考
+ CS336 课程回放（2026 春季）：CS 336: Language Modeling from Scratch
+ CS336 课程作业文档：https://github.com/stanford-cs336
+Andrej Karpathy 的网课：Let's reproduce GPT-2 (124M) 
