@@ -1,6 +1,6 @@
 # 跟着 stanford 动手学大模型
 
-本系列以斯坦福（Stanford）大学公开课 **CS 336: Language Modeling from Scratch** 为基底，以初学者友好、内容聚焦、讲解接地气的方式，介绍现代大语言模型的原理与代码实现。
+本系列以斯坦福（Stanford）大学公开课 [**CS 336: Language Modeling from Scratch**](https://cs336.stanford.edu/) 为基底，以初学者友好、内容聚焦、讲解接地气的方式，介绍现代大语言模型的原理与代码实现。
 
 整体讲解逻辑遵循 CS 336 课程作业文档，以任务点（Problem）的形式引导大家写出代码块 0、代码块 1……最终拼出大模型训练与推理所需要的一切代码。在讲解内容上会额外补充文档中略过的背景知识、基础概念与代码细节。
 
@@ -62,7 +62,8 @@ jupyter notebook
 ```
 
 ## 参考资料
-大模型优质资源参考
- CS336 课程回放（2026 春季）：CS 336: Language Modeling from Scratch
- CS336 课程作业文档：https://github.com/stanford-cs336
-Andrej Karpathy 的网课：Let's reproduce GPT-2 (124M) 
+
+- [CS 336 课程官网](https://cs336.stanford.edu/)
+- [CS 336 课程回放（2026 春季）](https://www.youtube.com/watch?v=JuoVZkPBiKk&list=PLoROMvodv4rMqXOcazWaTUHhq-yembLCV)
+- [CS 336 课程作业文档](https://github.com/stanford-cs336)
+- Let's reproduce GPT-2 (124M) — Andrej Karpathy
