@@ -34,13 +34,53 @@
 
 ```
 easy-llm/
-├── 第一章_构建一个 Transformer 模型/
-│   ├── 0_基础知识.ipynb          # Python / PyTorch 基础与张量操作
-│   ├── 1.2_tensor基本运算.ipynb  # Tensor 核心运算详解
-│   ├── 1.3_基础模块.ipynb        # Transformer 基础模块实现
-│   └── 1.4_前置归一化块.ipynb    # Pre-LayerNorm 块实现
-└── environment.yml                # Conda 环境配置文件
+├── 代码文档/
+│   ├── 第零章_大模型基础/
+│   │   └── 0_基础知识.ipynb
+│   └── 第一章_构建一个Transformer模型/
+│       ├── 1_transformer语言模型/
+│       │   ├── 1.2_tensor基本运算.ipynb
+│       │   ├── 1.3_基础模块.ipynb
+│       │   ├── 1.4_层归一化&旋转编码.ipynb
+│       │   ├── 1.4_多头注意力.ipynb
+│       │   ├── 1.4_前馈网络.ipynb
+│       │   └── 1.5_transformer模型.ipynb
+│       └── 2_模型训练/
+│           ├── 2.1_训练损失.ipynb
+│           ├── 2.2_优化器.ipynb
+│           └── 2.3_训练循环.ipynb
+├── scripts/
+│   ├── transformer.py             # 完整 Transformer 语言模型
+│   ├── training_utils.py          # 损失、优化器、调度、数据与 checkpoint 工具
+│   └── train_llm.py               # 完整训练入口与 W&B 实验记录
+├── DATA/                          # 本地数据目录，不提交到仓库
+├── results/                       # 本地 checkpoint 目录，不提交到仓库
+├── environment.yml               # Conda 环境配置
+└── README.md
 ```
+
+## 内容导航
+
+### 第零章：大模型基础
+
+- [0 基础知识](代码文档/第零章_大模型基础/0_基础知识.ipynb)
+
+### 第一章：构建 Transformer 模型
+
+模型结构：
+
+- [1.2 Tensor 基本运算](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.2_tensor基本运算.ipynb)
+- [1.3 基础模块](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.3_基础模块.ipynb)
+- [1.4 层归一化与旋转位置编码](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_层归一化&旋转编码.ipynb)
+- [1.4 多头注意力](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_多头注意力.ipynb)
+- [1.4 前馈网络](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_前馈网络.ipynb)
+- [1.5 Transformer 模型](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.5_transformer模型.ipynb)
+
+模型训练：
+
+- [2.1 训练损失](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.1_训练损失.ipynb)
+- [2.2 优化器](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.2_优化器.ipynb)
+- [2.3 训练循环](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.3_训练循环.ipynb)
 
 ## 环境配置
 
@@ -60,6 +100,37 @@ conda activate nanogpt
 # 4. 运行代码（以 Jupyter Notebook 为例）
 jupyter notebook
 ```
+
+## 准备数据并启动训练
+
+训练数据不随仓库分发。请将已经 token 化的一维 `.npy` 文件放到项目根目录的 `DATA/` 中，默认文件名为：
+
+```text
+DATA/
+├── TinyStoriesV2-GPT4-train.npy
+└── TinyStoriesV2-GPT4-valid.npy
+```
+
+首次使用 W&B 时先完成登录，然后从项目根目录启动训练：
+
+```bash
+wandb login
+python scripts/train_llm.py
+```
+
+可以通过命令行覆盖实验参数，例如：
+
+```bash
+python scripts/train_llm.py --batch_size 16 --max_lr 3e-4 --min_lr 3e-5 --seed 42
+```
+
+如果没有传入 `--run_name`，脚本会根据数据集、batch size、学习率区间和随机种子自动生成 W&B run 名。也可以手动指定：
+
+```bash
+python scripts/train_llm.py --run_name tinystories-baseline --seed 42
+```
+
+checkpoint 默认保存在 `results/checkpoints/`，文件名同时包含 run 名、W&B run ID 和训练步数，重复实验不会相互覆盖。
 
 ## 参考资料
 
