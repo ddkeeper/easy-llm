@@ -101,37 +101,6 @@ conda activate nanogpt
 jupyter notebook
 ```
 
-## 准备数据并启动训练
-
-训练数据不随仓库分发。请将已经 token 化的一维 `.npy` 文件放到项目根目录的 `DATA/` 中，默认文件名为：
-
-```text
-DATA/
-├── TinyStoriesV2-GPT4-train.npy
-└── TinyStoriesV2-GPT4-valid.npy
-```
-
-首次使用 W&B 时先完成登录，然后从项目根目录启动训练：
-
-```bash
-wandb login
-python scripts/train_llm.py
-```
-
-可以通过命令行覆盖实验参数，例如：
-
-```bash
-python scripts/train_llm.py --batch_size 16 --max_lr 3e-4 --min_lr 3e-5 --seed 42
-```
-
-如果没有传入 `--run_name`，脚本会根据数据集、batch size、学习率区间和随机种子自动生成 W&B run 名。也可以手动指定：
-
-```bash
-python scripts/train_llm.py --run_name tinystories-baseline --seed 42
-```
-
-checkpoint 默认保存在 `results/checkpoints/`，文件名同时包含 run 名、W&B run ID 和训练步数，重复实验不会相互覆盖。
-
 ## 参考资料
 
 - [CS 336 课程官网](https://cs336.stanford.edu/)
