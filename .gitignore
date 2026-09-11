@@ -1,6 +1,14 @@
 anonymous/
+references/
+DATA/
+.vscode/
+.workbuddy/
+wandb/
+results/
+tmp/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
 CLAUDE.md
+cs336_assignment1_basics.pdf
