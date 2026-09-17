@@ -34,19 +34,20 @@ class Linear(torch.nn.Module):
 
 # Problem 2: 实现 Embedding 模块 (1 分)
 class Embedding(torch.nn.Module):
-    def __init__(self, num_embeddings: int, embedding_dim: int, device=None, dtype=None):
+    def __init__(self, num_embeddings: int, embedding_dim: int, device=None, dtype=None, init_std: float = 1.0):
         super().__init__()
         '''
         num_embeddings: int  词表大小，取值范围 [0, num_embeddings‑1]
         embedding_dim: int  词向量的维度，也即模型特征维度 d_model
         device: torch.device | None = None  参数存放在哪个设备上
         dtype: torch.dtype | None = None  参数的数据类型
+        init_std: float = 1.0  截断正态初始化的标准差；调小（如 0.02）可以避免训练初期 loss 尖刺，属于可控的实验变量
         '''
 
         self.embed = nn.Parameter(torch.empty(num_embeddings, embedding_dim, device=device, dtype=dtype))
 
-        # 截断正态初始化，均值 0，标准差 1，截断区间 [-3,3]
-        nn.init.trunc_normal_(self.embed, mean=0, std=1, a=-3, b=3)
+        # 截断正态初始化，标准差由 init_std 给出，截断区间 [-3*std, 3*std]
+        nn.init.trunc_normal_(self.embed, mean=0, std=init_std, a=-3 * init_std, b=3 * init_std)
 
 
     def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
@@ -63,24 +64,29 @@ class Embedding(torch.nn.Module):
 
 # Problem 3: 实现 RMSNorm (1 point)
 class RMSNorm(torch.nn.Module):
-    def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None):
+    def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None, remove: bool = False):
         super().__init__()
         '''
         d_model: int  模型隐藏层的特征维度
         eps: float = 1e-5  数值稳定性极小值，防止分母为 0
         device: torch.device | None = None  参数存放设备
         dtype: torch.dtype | None = None  参数数据类型
+        remove: bool = False  消融开关，置 True 时本层退化成恒等映射（保留结构与参数数量，方便对照实验）
         '''
         self.d_model = d_model
         # 可学习缩放参数 gamma，初始化为全 1
         self.g = nn.Parameter(torch.ones(d_model, device=device, dtype=dtype)) # (d_model, )
         self.eps = eps
+        self.remove = remove
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
         输入形状: [..., d_model] 支持任意前置维度（如 batch_size, seq_len），最后一维为特征维度
         输出形状: [..., d_model] 与输入形状完全一致
         '''
+        if self.remove:   # 消融：整层不起作用，直接把输入原样传下去
+            return x
+
         # 记录原始精度，计算时提升到 float32 保证稳定，输出时还原精度
         in_dtype = x.dtype
         x = x.to(torch.float32)
@@ -251,54 +257,92 @@ class MultiHeadSelfAttention(nn.Module):
         
         return output
 
-# Problem 8: 实现逐位置前馈网络 (2 points)
+# 问题 8：实现逐位置前馈网络（2 分）
 class FFN(torch.nn.Module):
-    def __init__(self, d_model: int, d_ff: int=512, device=None, dtype=None):
+    def __init__(self, d_model: int, d_ff: int=512, device=None, dtype=None, gated: bool = True):
         super().__init__()
         '''
-        d_model: int  Hidden dimension of the model
-        eps: float = 1e-5  Epsilon value for numerical stability
-        device: torch.device | None = None  Device to store the parameters on
-        dtype: torch.dtype | None = None  Data type of the parameters
+        d_model: int  模型隐藏层/词向量的维度
+        d_ff: int  前馈网络中间层维度，由调用方 train_llm.py 按是否门控算好后传入
+        device: torch.device | None = None  参数存放设备
+        dtype: torch.dtype | None = None  参数的数据类型
+        gated: bool = True  消融开关，置 False 时退化成不带门控的普通 SiLU 前馈网络（即不建 w3）
         '''
-        # d_ff 由模型配置统一决定，避免忽略调用方传入的基准值
+        # 此处编写你的参数创建代码
+        # 127 // 64 = 1,  1 * 64 = 64,
+        # 这里直接采用传进来的 d_ff（调用方按 8/3 * d_model 或 4 * d_model 对齐到 64 的倍数算好）。
+        # 注意别再按 8/3 * d_model 自己重算一遍：那样 --no_gated_ffn 传进来的 4 * d_model 会被丢掉，
+        # 「去掉门控后参数量对齐」就失效了，消融结论会和参数量变化混在一起。
         self.d_ff = d_ff
+        self.gated = gated
         self.w1, self.w3 = Linear(d_model, self.d_ff, device=device, dtype=dtype), Linear(d_model, self.d_ff, device=device, dtype=dtype)
         self.w2 = Linear(self.d_ff, d_model, device=device, dtype=dtype)
+        if not gated:        # 消融：删掉门控分支后，参数量减少约三分之一
+            self.w3 = None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
-        FFN(x) = W2(SiLU(W1*x) ⊙ W3*x)
+        FFN(x) = W2(SiLU(W1*x) ⊙ W3*x)   gated=True  门控版本（SwiGLU）
+        FFN(x) = W2(SiLU(W1*x))          gated=False 普通版本（plain SiLU）
         ⊙ 代表逐‑元素相乘
+        x: (batch_size, seq_len, d_model)
+        return: (batch_size, seq_len, d_model)
         '''
-        y1 = self.w1(x)
-        y13 = y1 * torch.sigmoid(y1) * self.w3(x)
-        return self.w2(y13)
+        y1 = self.w1(x)                          # (B, S, d_model) -> (B, S, d_ff)  W1 线性映射
+        y13 = y1 * torch.sigmoid(y1)             # SiLU(x) = x * sigmoid(x)，用 torch.sigmoid 保证数值稳定
+        if self.gated:
+            # GLU 门控：SiLU 分支再与 W3 分支逐元素相乘
+            y13 = y13 * self.w3(x)               # (B, S, d_ff) ⊙ (B, S, d_ff) -> (B, S, d_ff)
+        return self.w2(y13)                      # (B, S, d_ff) -> (B, S, d_model)  输出投影
 
-# Problem 9:  Implement the Transformer block (3 points)
+
+# 问题 9：实现 Transformer 块（3 分）
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, d_ff: int, max_seq_len: int, rope_theta: float) -> None:
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, max_seq_len: int, rope_theta: float,
+                 use_rmsnorm: bool = True, pre_norm: bool = True, ffn_gated: bool = True) -> None:
         super().__init__()
         '''
-        d_model: int Dimensionality of the Transformer block inputs.
-        num_heads: int Number of heads to use in multi-head self-attention.
-        d_ff: int Dimensionality of the position-wise feed-forward inner layer.
+        d_model: int  Transformer 块输入维度
+        num_heads: int  多头自注意力头数
+        d_ff: int  前馈网络中间层维度
+        max_seq_len: int  RoPE 最大序列长度
+        rope_theta: float  RoPE 基数频率，传 0 或负数即关闭 RoPE（NoPE 消融）
+        use_rmsnorm: bool = True   消融开关，False 时把两块 RMSNorm 都换成恒等映射
+        pre_norm: bool = True      消融开关，False 时改用 Post‑Norm 结构
+        ffn_gated: bool = True     消融开关，False 时 FFN 去掉门控分支
         '''
+        # 子层 1：因果多头自注意力 + 残差连接
         self.mha = MultiHeadSelfAttention(d_model, num_heads, max_seq_len, rope_theta)
-        self.pre_norm1 = RMSNorm(d_model)
-        self.ffn = FFN(d_model, d_ff)
-        self.pre_norm2 = RMSNorm(d_model)
-        
+        self.pre_norm1 = RMSNorm(d_model, remove=not use_rmsnorm)  # 子层 1 的归一化
+        # 子层 2：前馈网络 + 残差连接
+        self.ffn = FFN(d_model, d_ff, gated=ffn_gated)
+        self.pre_norm2 = RMSNorm(d_model, remove=not use_rmsnorm)  # 子层 2 的归一化
+        self.pre_norm = pre_norm
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # part1
-        x = x + self.mha(self.pre_norm1(x))
-        # part 2
-        y = x + self.ffn(self.pre_norm2(x))
-
+        '''
+        Pre‑Norm（pre_norm=True，默认）：
+        y = x + MHA(RMSNorm(x))
+        z = y + FFN(RMSNorm(y))
+        Post‑Norm（pre_norm=False，消融）：
+        y = RMSNorm(x + MHA(x))
+        z = RMSNorm(y + FFN(y))
+        x: (batch_size, seq_len, d_model)
+        return: (batch_size, seq_len, d_model)
+        '''
+        if self.pre_norm:
+            # part1：子层 1 = 多头自注意力 + 残差连接
+            x = x + self.mha(self.pre_norm1(x))  # (B, S, d_model) -> (B, S, d_model)
+            # part 2：子层 2 = 前馈网络 + 残差连接
+            y = x + self.ffn(self.pre_norm2(x))  # (B, S, d_model) -> (B, S, d_model)
+        else:
+            # post-norm：残差相加之后再归一化
+            x = self.pre_norm1(x + self.mha(x))  # (B, S, d_model) -> (B, S, d_model)
+            y = self.pre_norm2(x + self.ffn(x))  # (B, S, d_model) -> (B, S, d_model)
         return y
 
-# Problem 10:  Implementing the Transformer LM (3 points)
+
+# 问题 10：实现 Transformer 语言模型（3 分）
 class TransformerLM(nn.Module):
     def __init__(
         self,
@@ -308,27 +352,64 @@ class TransformerLM(nn.Module):
         vocab_size: int,
         context_length: int,
         num_layers: int,
-        rope_theta: float
+        rope_theta: float,
+        use_rmsnorm: bool = True,
+        pre_norm: bool = True,
+        ffn_gated: bool = True,
+        tie_embedding: bool = False,
+        embed_init_std: float = 1.0
     ) -> None:
         super().__init__()
         '''
-        d_model: int Dimensionality of the Transformer block inputs.
-        num_heads: int Number of heads to use in multi-head self-attention.
-        d_ff: int Dimensionality of the position-wise feed-forward inner layer.
-        vocab_size: int The size of the vocabulary, necessary for determining the dimensionality of the token embedding matrix.
-        context_length: int The maximum context length, necessary for determining the dimensionality of the RoPE sin and cos buffer.
-        num_layers: int The number of Transformer blocks to use.
+        d_model: int  Transformer 块输入维度
+        num_heads: int  多头自注意力头数
+        d_ff: int  前馈网络中间层维度
+        vocab_size: int  词表大小，决定词元嵌入矩阵维度
+        context_length: int  最大上下文长度，决定 RoPE 的 sin/cos 缓存长度
+        num_layers: int  Transformer 块堆叠层数
+        rope_theta: float  RoPE 基数频率，传 0 或负数即关闭 RoPE（NoPE 消融）
+        use_rmsnorm: bool = True      消融开关，False 时移除全部 RMSNorm
+        pre_norm: bool = True         消融开关，False 时改用 Post‑Norm
+        ffn_gated: bool = True        消融开关，False 时 FFN 去掉门控分支
+        tie_embedding: bool = False   消融/性能优化开关，True 时输出头与输入嵌入共享同一个权重矩阵
+        embed_init_std: float = 1.0   嵌入层初始化标准差
         '''
-        self.embed = Embedding(vocab_size, d_model)
-        self.transformerBlocks = nn.Sequential(*[TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta=rope_theta) for _ in range(num_layers)])
-        self.final_norm = RMSNorm(d_model)
-        self.llm_head = Linear(d_model, vocab_size)
+        self.tie_embedding = tie_embedding
+        self.embed = Embedding(vocab_size, d_model, init_std=embed_init_std)         # 词元嵌入
+        self.transformerBlocks = nn.Sequential(
+            *[TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta=rope_theta,
+                               use_rmsnorm=use_rmsnorm, pre_norm=pre_norm, ffn_gated=ffn_gated)
+              for _ in range(num_layers)] # 列表推导式
+        )                                                                             # num_layers 层 Transformer 块堆叠
+
+        '''
+        # 等价写法
+        self.transformerBlocks = []
+        
+        for i in range(num_layers):
+            trans_i = TransformerBlock(d_model, num_heads, d_ff, context_length, rope_theta=rope_theta)
+            self.transformerBlocks.append(trans_i)    
+        
+        ===forward===
+        # 输入 x 按顺序通过所有块的处理
+        for block in self.transformerBlocks:
+            x = block(x)
+            
+        '''
+        self.final_norm = RMSNorm(d_model, remove=not use_rmsnorm)                   # 最终层归一化
+        self.llm_head = Linear(d_model, vocab_size)                                   # 输出投影/预测头
+        if tie_embedding:
+            # 权重共享：输出头直接复用嵌入矩阵，省下一份 vocab_size × d_model 的参数
+            # 注意这里不能再对 llm_head.w 做一次独立初始化，否则会破坏"共享同一个张量"的语义
+            self.llm_head.w = self.embed.embed
 
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
-
-        x_embed = self.embed(tokens)
-        x_blocks = self.transformerBlocks(x_embed)
-
-        llm_output = self.llm_head(self.final_norm(x_blocks))
-
+        '''
+        输入: (batch_size, seq_len) 整数 token IDs
+        输出: (batch_size, seq_len, vocab_size) 下一个 token 的 logits
+        '''
+        x_embed = self.embed(tokens)                                # (B, S) -> (B, S, d_model)
+        x_blocks = self.transformerBlocks(x_embed)                 # (B, S, d_model) -> (B, S, d_model)
+        llm_output = self.llm_head(self.final_norm(x_blocks))      # (B, S, d_model) -> (B, S, vocab_size)
         return llm_output
+

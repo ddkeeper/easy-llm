@@ -1,6 +1,7 @@
 anonymous/
 references/
-DATA/
+.服务器代码/
+data/
 .vscode/
 .workbuddy/
 wandb/

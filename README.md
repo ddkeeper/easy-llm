@@ -45,15 +45,19 @@ easy-llm/
 │       │   ├── 1.4_多头注意力.ipynb
 │       │   ├── 1.4_前馈网络.ipynb
 │       │   └── 1.5_transformer模型.ipynb
-│       └── 2_模型训练/
-│           ├── 2.1_训练损失.ipynb
-│           ├── 2.2_优化器.ipynb
-│           └── 2.3_训练循环.ipynb
+│       ├── 2_模型训练/
+│       │   ├── 2.1_训练损失.ipynb
+│       │   ├── 2.2_优化器.ipynb
+│       │   └── 2.3_训练循环.ipynb
+│       └── 3_实验/
+│           ├── 3.0_训练资源估算.ipynb
+│           └── 3.3_文本生成.ipynb
 ├── scripts/
 │   ├── transformer.py             # 完整 Transformer 语言模型
 │   ├── training_utils.py          # 损失、优化器、调度、数据与 checkpoint 工具
-│   └── train_llm.py               # 完整训练入口与 W&B 实验记录
-├── DATA/                          # 本地数据目录，不提交到仓库
+│   ├── train_llm.py               # 完整训练入口与 W&B 实验记录
+│   └── run_experiments.sh         # 实验脚本：lr / batch size 扫描与消融实验
+├── data/                          # 数据集目录，从 Release 下载，不提交到仓库
 ├── results/                       # 本地 checkpoint 目录，不提交到仓库
 ├── environment.yml               # Conda 环境配置
 └── README.md
@@ -82,6 +86,11 @@ easy-llm/
 - [2.2 优化器](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.2_优化器.ipynb)
 - [2.3 训练循环](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.3_训练循环.ipynb)
 
+模型实验：
+
+- [3.0 训练资源估算](代码文档/第一章_构建一个Transformer模型/3_实验/3.0_训练资源估算.ipynb)
+- [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)
+
 ## 环境配置
 
 本项目运行环境为 Conda（推荐使用 [Miniconda](https://docs.anaconda.com/miniconda/)），Python 3.10 + PyTorch 2.5（CUDA 12.1）。
@@ -100,6 +109,44 @@ conda activate nanogpt
 # 4. 运行代码（以 Jupyter Notebook 为例）
 jupyter notebook
 ```
+
+## 数据集
+
+本项目使用 [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories) V2-GPT4，
+训练集与验证集都已用课程实现的 BPE 分词器（词表 10000）编码成 uint16 的 numpy 数组：
+
+| 文件 | 大小 | token 数 |
+|------|------|----------|
+| `TinyStoriesV2-GPT4-train.npy` | 1013.5 MB | 531,386,205 |
+| `TinyStoriesV2-GPT4-valid.npy` | 10.2 MB | 5,365,116 |
+
+训练集超过 GitHub 的单文件 100 MB 上限，因此托管在 Release 上，按需下载：
+
+```bash
+mkdir -p data/TinyStories && cd data/TinyStories
+base=https://github.com/ddkeeper/easy-llm/releases/download/data-v1
+curl -LO $base/TinyStoriesV2-GPT4-train.npy
+curl -LO $base/TinyStoriesV2-GPT4-valid.npy
+```
+
+下载完成后 `scripts/train_llm.py` 的默认路径即可直接命中，不必再传
+`--train_data_path` / `--val_data_path`。sha256 校验值见
+[Release 说明](https://github.com/ddkeeper/easy-llm/releases/tag/data-v1)。
+
+## 运行训练与实验
+
+脚本约定在**项目根目录**、已激活 `nanogpt` 环境的前提下执行，所有路径都相对项目根目录。
+
+```bash
+# 训练一个基准模型（数据集默认取 data/TinyStories/）
+python scripts/train_llm.py --amp --device cuda
+
+# 批量跑实验：先取消 run_experiments.sh 底部「实验命令」中要跑的行注释，再执行整个文件
+bash scripts/run_experiments.sh
+```
+
+实验名会自动拼成 `{实验类型}-lr{峰值}_{谷值}-bs{batch_size}-s{种子}`，训练日志同步到 W&B，
+检查点保存到 `results/checkpoints/{数据集}/{实验名}/`。
 
 ## 参考资料
 
