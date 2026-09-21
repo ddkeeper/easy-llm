@@ -44,6 +44,7 @@ easy-llm/
 ├── data/                          # 数据集
 ├── results/tokenizer/             # 训练好的 BPE 分词器
 ├── environment.yml                # Conda 环境配置
+├── cs336_assignment1_basics.pdf   # CS336 作业文档
 └── README.md
 ```
 
@@ -58,14 +59,13 @@ conda env create -f environment.yml
 
 # 3. 激活环境
 conda activate nanogpt
-
-# 4. 切到项目根目录
-cd easy-llm
-
-# 运行实验命令
 ```
 
 ## 数据集
+
+每个数据集一节，数据放入 `data/<数据集名>/`，对应的分词器放在 `results/tokenizer/<数据集名>-train/`。
+
+### 1. TinyStories V2-GPT4
 
 原始数据集：[TinyStories V2-GPT4](https://huggingface.co/datasets/roneneldan/TinyStories)。
 
@@ -75,10 +75,9 @@ cd easy-llm
 
 下载后放入 `data/TinyStories/`，`scripts/train_llm.py` 的默认路径即可直接命中。
 
-### 分词器
+分词器已随仓库提供：`results/tokenizer/TinyStoriesV2-GPT4-train/`，用法见 [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)。
 
-仓库已提供训练好的分词器：`results/tokenizer/TinyStoriesV2-GPT4-train/`。
-用法见 [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)。
+> 分词器的实现及其训练将在补充部分介绍，我们在这里先用后学。
 
 ## 训练与实验
 
