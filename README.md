@@ -6,29 +6,24 @@
 
 ## 为什么不看原版课程？
 
-1. **访问门槛**：原版课程需要科学上网（B 站有双语字幕版，有基础的同学强烈建议食用）
-2. **基础要求高**：原版默认有基础，讲得干练简洁，无相关基础容易从入门到放弃
-3. **周期过长**：原版课程横跨模型、数据、系统等多层，完整看完性价比不高
+1. ~~看原版课需要科学上网~~（B 站搜 cs336 有双语字幕版，强烈建议有基础的朋友们食用）
+2. 原版课程默认有基础，讲的比较干练简洁，对于无相关基础的同学来说容易从入门到放弃
+3. 原版课程体系庞大，横跨模型，数据，系统等多层，学习周期长，完整看完的性价比不高
 
-## 相较于原版的不同点
+## 我的视频相较于原版有什么不同点吗？
+1. 初学者友好：帮大家把必要的基础补上，随后快速切入核心内容，遵循现学现用的原则
+2. 内容聚焦：关注原版课程中最通配的那部分内容（比如 transformer 结构），学习周期更短
+3. 讲解接地气：结合代码示例、配图等进行讲解，尽量降低大家的学习难度
 
-| 原版 | 本系列 |
-|------|--------|
-| 默认有基础 | 帮大家把必要基础补上，遵循现学现用 |
-| 覆盖面广 | 聚焦最通配的核心内容（如 Transformer 结构），学习周期更短 |
-| 纯板书/讲义 | 结合代码示例、配图讲解，降低学习难度 |
+## 哪些人适合看我的系列视频？
+1. 像我一样对大模型感兴趣，想手搓自己大模型的朋友们（零基础的朋友们也能跟上）
+2. 想要短期内掌握大模型核心内容与代码的的同学（本科/研 0 的同学、转码的同学）
+3. 想要做一个大模型相关的入门项目（非开发方向，不适合用作求职项目）
 
-## 适合谁看？
-
-- 对大模型感兴趣，想手搓自己大模型的朋友（零基础也能跟上）
-- 想短期内掌握大模型核心内容与代码的同学（本科/研 0 / 转码）
-- 想做一个大模型相关入门项目（考研复试 / 实习简历项目均可）
-
-## 学完你能获得什么？
-
+## 看完我的视频后大家能获得什么？
 1. 入门大模型所需要的基础知识
 2. 动手搭建完整大模型系统的基础代码能力（涵盖数据、训练、评估和推理）
-3. 一段扎实的项目经历
+3. 一段扎实的项目经历（考研复试项目、实习简历项目都可以用）
 
 ## 项目结构
 
@@ -36,142 +31,67 @@
 easy-llm/
 ├── 代码文档/
 │   ├── 第零章_大模型基础/
-│   │   └── 0_基础知识.ipynb
 │   └── 第一章_构建一个Transformer模型/
 │       ├── 1_transformer语言模型/
-│       │   ├── 1.2_tensor基本运算.ipynb
-│       │   ├── 1.3_基础模块.ipynb
-│       │   ├── 1.4_层归一化&旋转编码.ipynb
-│       │   ├── 1.4_多头注意力.ipynb
-│       │   ├── 1.4_前馈网络.ipynb
-│       │   └── 1.5_transformer模型.ipynb
 │       ├── 2_模型训练/
-│       │   ├── 2.1_训练损失.ipynb
-│       │   ├── 2.2_优化器.ipynb
-│       │   └── 2.3_训练循环.ipynb
 │       └── 3_实验/
-│           ├── 3.0_训练资源估算.ipynb
-│           └── 3.3_文本生成.ipynb
 ├── scripts/
 │   ├── transformer.py             # 完整 Transformer 语言模型
 │   ├── training_utils.py          # 损失、优化器、调度、数据与 checkpoint 工具
-│   ├── bpe_tokenizer.py           # 字节级 BPE 分词器：载入 vocab.json / merge.txt 即可用
-│   ├── train_llm.py               # 完整训练入口与 W&B 实验记录
+│   ├── bpe_tokenizer.py           # 字节级 BPE 分词器
+│   ├── train_llm.py               # 训练入口与 W&B 实验记录
 │   └── run_experiments.sh         # 实验脚本：lr / batch size 扫描与消融实验
-├── data/                          # 数据集目录，从 Release 下载，不提交到仓库
-├── results/
-│   ├── tokenizer/                 # 训练好的 BPE 分词器（词表 10000），随仓库提供
-│   └── checkpoints/               # 本地训练产生的 checkpoint，体积过大不提交
-├── environment.yml               # Conda 环境配置
+├── data/                          # 数据集
+├── results/tokenizer/             # 训练好的 BPE 分词器
+├── environment.yml                # Conda 环境配置
 └── README.md
 ```
-
-## 内容导航
-
-### 第零章：大模型基础
-
-- [0 基础知识](代码文档/第零章_大模型基础/0_基础知识.ipynb)
-
-### 第一章：构建 Transformer 模型
-
-模型结构：
-
-- [1.2 Tensor 基本运算](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.2_tensor基本运算.ipynb)
-- [1.3 基础模块](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.3_基础模块.ipynb)
-- [1.4 层归一化与旋转位置编码](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_层归一化&旋转编码.ipynb)
-- [1.4 多头注意力](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_多头注意力.ipynb)
-- [1.4 前馈网络](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.4_前馈网络.ipynb)
-- [1.5 Transformer 模型](代码文档/第一章_构建一个Transformer模型/1_transformer语言模型/1.5_transformer模型.ipynb)
-
-模型训练：
-
-- [2.1 训练损失](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.1_训练损失.ipynb)
-- [2.2 优化器](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.2_优化器.ipynb)
-- [2.3 训练循环](代码文档/第一章_构建一个Transformer模型/2_模型训练/2.3_训练循环.ipynb)
-
-模型实验：
-
-- [3.0 训练资源估算](代码文档/第一章_构建一个Transformer模型/3_实验/3.0_训练资源估算.ipynb)
-- [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)
 
 ## 环境配置
 
 本项目运行环境为 Conda（推荐使用 [Miniconda](https://docs.anaconda.com/miniconda/)），Python 3.10 + PyTorch 2.5（CUDA 12.1）。
 
 ```bash
-# 1. 安装 Miniconda（如已安装可跳过）
-#    下载地址：https://docs.anaconda.com/miniconda/
-#    安装完成后打开终端（Anaconda Prompt 或系统终端）
-
+# 1. 安装 Miniconda（如已安装可跳过），下载地址：https://docs.anaconda.com/miniconda/
 # 2. 基于 environment.yml 创建环境
 conda env create -f environment.yml
 
 # 3. 激活环境
 conda activate nanogpt
 
-# 4. 运行代码（以 Jupyter Notebook 为例）
-jupyter notebook
+# 4. 切到项目根目录
+cd easy-llm
+
+# 运行实验命令
 ```
 
 ## 数据集
 
-本项目使用 [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories) V2-GPT4，
-训练集与验证集都已用课程实现的 BPE 分词器（词表 10000）编码成 uint16 的 numpy 数组：
+原始数据集：[TinyStories V2-GPT4](https://huggingface.co/datasets/roneneldan/TinyStories)。
 
-| 文件 | 大小 | token 数 |
-|------|------|----------|
-| `TinyStoriesV2-GPT4-train.npy` | 1013.5 MB | 531,386,205 |
-| `TinyStoriesV2-GPT4-valid.npy` | 10.2 MB | 5,365,116 |
+本仓库提供的是分词后的版本：训练集与验证集已用课程实现的 BPE 分词器（词表大小 10000）编码为 uint16 的 numpy 数组。
 
-训练集超过 GitHub 的单文件 100 MB 上限，因此托管在 Release 上，按需下载：
+下载地址：https://github.com/ddkeeper/easy-llm/releases/tag/data-v1
 
-```bash
-mkdir -p data/TinyStories && cd data/TinyStories
-base=https://github.com/ddkeeper/easy-llm/releases/download/data-v1
-curl -LO $base/TinyStoriesV2-GPT4-train.npy
-curl -LO $base/TinyStoriesV2-GPT4-valid.npy
-```
-
-下载完成后 `scripts/train_llm.py` 的默认路径即可直接命中，不必再传
-`--train_data_path` / `--val_data_path`。sha256 校验值见
-[Release 说明](https://github.com/ddkeeper/easy-llm/releases/tag/data-v1)。
+下载后放入 `data/TinyStories/`，`scripts/train_llm.py` 的默认路径即可直接命中。
 
 ### 分词器
 
-编码上面两个 `.npy` 用的是课程实现的字节级 BPE 分词器（词表 10000），它的训练产物已在仓库里，
-clone 后可以直接用，不需要自己重跑分词：
+仓库已提供训练好的分词器：`results/tokenizer/TinyStoriesV2-GPT4-train/`。
+用法见 [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)。
 
-| 文件 | 大小 | 说明 |
-|------|------|------|
-| `results/tokenizer/TinyStoriesV2-GPT4-train/vocab.json` | 254 KB | 词表：token ID → 字节串（十六进制） |
-| `results/tokenizer/TinyStoriesV2-GPT4-train/merge.txt` | 165 KB | 9743 条合并规则，按创建顺序排列 |
-
-```python
-from bpe_tokenizer import Tokenizer      # scripts/ 已在 sys.path 中
-
-tokenizer = Tokenizer()
-tokenizer.from_files("results/tokenizer/TinyStoriesV2-GPT4-train/vocab.json",
-                     "results/tokenizer/TinyStoriesV2-GPT4-train/merge.txt",
-                     ["<|end_of_text|>"])          # 训练时注册的特殊 token
-tokenizer.encode("Once upon a time")               # [437, 446, 259, 403]
-```
-
-分词器本身的训练代码属于第 2 章，见 `代码文档/` 下对应 notebook。
-
-## 运行训练与实验
-
-脚本约定在**项目根目录**、已激活 `nanogpt` 环境的前提下执行，所有路径都相对项目根目录。
+## 训练与实验
 
 ```bash
+conda activate nanogpt
+cd easy-llm
 # 训练一个基准模型（数据集默认取 data/TinyStories/）
 python scripts/train_llm.py --amp --device cuda
 
-# 批量跑实验：先取消 run_experiments.sh 底部「实验命令」中要跑的行注释，再执行整个文件
+# 批量跑实验（Windows 上需在 Git Bash 中执行）：
+# 先取消 scripts/run_experiments.sh 底部「实验命令」中要跑的行注释，再执行整个文件
 bash scripts/run_experiments.sh
 ```
-
-实验名会自动拼成 `{实验类型}-lr{峰值}_{谷值}-bs{batch_size}-s{种子}`，训练日志同步到 W&B，
-检查点保存到 `results/checkpoints/{数据集}/{实验名}/`。
 
 ## 参考资料
 

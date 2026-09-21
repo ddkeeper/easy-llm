@@ -1,3 +1,4 @@
-# 数据文件不做任何行尾转换，保证在不同平台上 clone 后字节一致
+# 二进制 / 数据文件不做任何行尾转换，保证在不同平台上 clone 后字节一致
 results/tokenizer/** -text
 data/** -text
+*.pdf -text
