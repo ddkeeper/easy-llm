@@ -5,7 +5,9 @@ data/
 .vscode/
 .workbuddy/
 wandb/
-results/
+# results/ 下只保留分词器（约 420 KB，clone 后即可用），checkpoint 体积太大不提交
+results/*
+!results/tokenizer/
 tmp/
 __pycache__/
 *.pyc

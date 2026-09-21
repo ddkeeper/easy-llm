@@ -55,10 +55,13 @@ easy-llm/
 ├── scripts/
 │   ├── transformer.py             # 完整 Transformer 语言模型
 │   ├── training_utils.py          # 损失、优化器、调度、数据与 checkpoint 工具
+│   ├── bpe_tokenizer.py           # 字节级 BPE 分词器：载入 vocab.json / merge.txt 即可用
 │   ├── train_llm.py               # 完整训练入口与 W&B 实验记录
 │   └── run_experiments.sh         # 实验脚本：lr / batch size 扫描与消融实验
 ├── data/                          # 数据集目录，从 Release 下载，不提交到仓库
-├── results/                       # 本地 checkpoint 目录，不提交到仓库
+├── results/
+│   ├── tokenizer/                 # 训练好的 BPE 分词器（词表 10000），随仓库提供
+│   └── checkpoints/               # 本地训练产生的 checkpoint，体积过大不提交
 ├── environment.yml               # Conda 环境配置
 └── README.md
 ```
@@ -132,6 +135,28 @@ curl -LO $base/TinyStoriesV2-GPT4-valid.npy
 下载完成后 `scripts/train_llm.py` 的默认路径即可直接命中，不必再传
 `--train_data_path` / `--val_data_path`。sha256 校验值见
 [Release 说明](https://github.com/ddkeeper/easy-llm/releases/tag/data-v1)。
+
+### 分词器
+
+编码上面两个 `.npy` 用的是课程实现的字节级 BPE 分词器（词表 10000），它的训练产物已在仓库里，
+clone 后可以直接用，不需要自己重跑分词：
+
+| 文件 | 大小 | 说明 |
+|------|------|------|
+| `results/tokenizer/TinyStoriesV2-GPT4-train/vocab.json` | 254 KB | 词表：token ID → 字节串（十六进制） |
+| `results/tokenizer/TinyStoriesV2-GPT4-train/merge.txt` | 165 KB | 9743 条合并规则，按创建顺序排列 |
+
+```python
+from bpe_tokenizer import Tokenizer      # scripts/ 已在 sys.path 中
+
+tokenizer = Tokenizer()
+tokenizer.from_files("results/tokenizer/TinyStoriesV2-GPT4-train/vocab.json",
+                     "results/tokenizer/TinyStoriesV2-GPT4-train/merge.txt",
+                     ["<|end_of_text|>"])          # 训练时注册的特殊 token
+tokenizer.encode("Once upon a time")               # [437, 446, 259, 403]
+```
+
+分词器本身的训练代码属于第 2 章，见 `代码文档/` 下对应 notebook。
 
 ## 运行训练与实验
 
