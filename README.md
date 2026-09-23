@@ -1,5 +1,6 @@
-# 跟着 stanford 动手学大模型
+本项目为[**【斯坦福 cs336】零基础手搓大模型系列视频**](https://www.bilibili.com/video/BV1NV8t6AE4T/?vd_source=0034741cbe350a95fe85ffdab1bdc34a)的配套项目。
 
+## 系列视频介绍
 本系列以斯坦福（Stanford）大学公开课 [**CS 336: Language Modeling from Scratch**](https://cs336.stanford.edu/) 为基底，以初学者友好、内容聚焦、讲解接地气的方式，介绍现代大语言模型的原理与代码实现。
 
 整体讲解逻辑遵循 CS 336 课程作业文档，以任务点（Problem）的形式引导大家写出代码块 0、代码块 1……最终拼出大模型训练与推理所需要的一切代码。在讲解内容上会额外补充文档中略过的背景知识、基础概念与代码细节。
