@@ -66,6 +66,32 @@ conda activate nanogpt
 
 每个数据集一节，数据放入 `data/<数据集名>/`，对应的分词器放在 `results/tokenizer/<数据集名>-train/`。
 
+### 下载原始数据
+
+如需从 HuggingFace 手动下载原始文本，可执行：
+
+```sh
+mkdir -p data
+cd data
+
+# TinyStories
+wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-train.txt
+wget https://huggingface.co/datasets/roneneldan/TinyStories/resolve/main/TinyStoriesV2-GPT4-valid.txt
+
+# OpenWebText（owt-sample）
+wget https://huggingface.co/datasets/stanford-cs336/owt-sample/resolve/main/owt_train.txt.gz
+gunzip owt_train.txt.gz
+wget https://huggingface.co/datasets/stanford-cs336/owt-sample/resolve/main/owt_valid.txt.gz
+gunzip owt_valid.txt.gz
+
+cd ..
+```
+
+对应的 HuggingFace 地址：
+
+- TinyStories：[roneneldan/TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories)
+- OpenWebText：[stanford-cs336/owt-sample](https://huggingface.co/datasets/stanford-cs336/owt-sample)
+
 ### 1. TinyStories V2-GPT4
 
 原始数据集：[TinyStories V2-GPT4](https://huggingface.co/datasets/roneneldan/TinyStories)。
