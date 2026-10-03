@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-train_bpe.py —— 训练字节级 BPE 分词器（补充 1「BPE 训练」的实现）。
+train_bpe.py —— 训练字节级 BPE 分词器（补充 1「BPE 训练」的优化版本实现）。
 
 包含三个函数：
     preprocess_chunks   预分词 + 计数（按特殊 token 切块 + GPT-2 正则）
@@ -94,6 +94,7 @@ def train_bpe(input_path, vocab_size, special_tokens, output_path=None):
         vocab  : dict[int, bytes]  token ID -> 对应字节串
         merges : list[tuple[bytes, bytes]]  按创建顺序排列的合并规则
     """
+    
     # 1) 词表初始化：256 个字节 + 特殊 token
     vocab = {i: bytes([i]) for i in range(256)}
     for i, st in enumerate(special_tokens):
@@ -148,12 +149,18 @@ def train_bpe(input_path, vocab_size, special_tokens, output_path=None):
 
 
 if __name__ == "__main__":
+    t_start = time.time()
     # 在项目根目录、已激活 nanogpt 环境执行：python scripts/train_bpe.py
     # 训练数据与词表大小按需改这里的路径与参数即可（训练产物写到 results/tokenizer/<数据集名>/）。
 
     # TinyStories：词表 10,000，特殊 token 用于分隔文档
-    output_path = "results/Tinystories_try"
-    train_bpe("data/TinyStories/TinyStoriesV2-GPT4-train.txt", 300, ["<|endoftext|>"], output_path=output_path) # 标准大小：10000
+    output_path = "TinyStoriesV2-GPT4-train"
 
+    # 目标词表大小为 1257，BPE 跑了 1257-257=1000 轮，训练部分总耗时为 5.21s；脚本实际执行时间为 840.06s，预分词太费时间了
+    # 实际工程里往往会把一个大文件拆分成多块，使用多进程并行跑预分词与局部词频统计，最后再归约合并，得到全局词频统计
+    # train_bpe("data/TinyStories/TinyStoriesV2-GPT4-train.txt", 1257, ["<|endoftext|>"], output_path=output_path) # 标准大小：10000
+    train_bpe("data/TinyStories/TinyStoriesV2-GPT4-train.txt", 10000, ["<|endoftext|>"], output_path=output_path) # 标准大小：10000
+
+    print(f"脚本总耗时: {time.time() - t_start:.2f}s")
     # OpenWebText：词表 32,000，同一套代码只改 vocab_size 与输入路径
     # train_bpe("data/openwebtext/owt_train.txt", 32000, ["<|endoftext|>"])

@@ -37,8 +37,7 @@ class Tokenizer():
         '''
         self.vocab = vocab
         self.merges = merges
-        # 直接记录每条 merge 的创建顺序；编码时按这个优先级选择 pair。
-        self.merge_ranks = {pair: rank for rank, pair in enumerate(self.merges or [])}
+        self.merge_ranks = {pair: rank for rank, pair in enumerate(self.merges or [])} # 记录每条 merge 的创建顺序，编码时按这个优先级选择 pair
         self.special_tokens = list(special_tokens) if special_tokens else []
         self._build_pattern()
 
@@ -135,7 +134,10 @@ class Tokenizer():
         return encoded_ids
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
-        '''逐条编码一个可迭代对象（如按行读取的大文件），用生成器避免一次性把结果拼成大列表'''
+        '''
+        逐条编码一个可迭代对象（如按行读取的大文件）。
+        返回的是生成器（类）：token ID 边算边产出、逐个被消费，不会一次性把全部结果拼成一个大列表，省内存。
+        '''
         for text in iterable:
             for id in self.encode(text):
                 yield id

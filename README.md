@@ -59,7 +59,7 @@ conda activate nanogpt
 数据放入 `data/<数据集名>/`，对应的分词器放在 `results/tokenizer/<数据集名>-train/`。
 
 - **TinyStories**：[roneneldan/TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories)。本仓库提供[分词后的 numpy 版本](https://github.com/ddkeeper/easy-llm/releases/tag/data-v1)（词表 10000，uint16），下载后放入 `data/TinyStories/`。
-> 该分词器（`results/tokenizer/TinyStoriesV2-GPT4-train/`）已随仓库提供，用法见 [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)。分词器的实现与训练将在补充部分介绍，我们可以先用后学。
+> 该分词器（`results/tokenizer/TinyStoriesV2-GPT4-train/`）已随仓库提供，用法见 [3.3 文本生成](代码文档/第一章_构建一个Transformer模型/3_实验/3.3_文本生成.ipynb)。分词器的实现与训练将在补充 1 里介绍，在学习 3.3 文本生成时可以先用后学。
 - **OpenWebText**：[stanford-cs336/owt-sample](https://huggingface.co/datasets/stanford-cs336/owt-sample)（CS336 官方抽样版）。
 
 也可以在终端使用 wget 命令下载原始文本：
