@@ -36,6 +36,7 @@ import wandb   # Weights & Biases：实验记录与可视化平台，本脚本�
 from training_utils import (
     cross_entropy,
     AdamW,
+    Muon,
     learning_rate_schedule,
     gradient_clipping,
     get_batch,
@@ -64,7 +65,9 @@ def train_step(model: torch.nn.Module,
     scaler: torch.amp.GradScaler | None  混合精度用的梯度缩放器；传 None 表示走普通 fp32 流程
     '''
 
-    optimizer.param_groups[0]["lr"] = lr   # 余弦调度给出的学习率，必须在 step 之前写进去
+    # 余弦调度给出的学习率，必须在 step 之前写进去；Muon/AdamW 分组时每个组都要写
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = lr
     use_amp = scaler is not None           # 是否走混合精度
 
     # 混合精度：矩阵乘在 autocast 上下文里自动降到 bfloat16 计算，其余算子保持 fp32
@@ -113,7 +116,7 @@ def train_llm(model: torch.nn.Module,
     #   mode 默认 online：日志实时上传到 wandb 云端（需要能联网且已经 wandb login）
     #   想只在本地留一份，就在命令前加 WANDB_MODE=offline，之后可用 wandb sync 补传
     
-    run = wandb.init(project="easy-llm", name=args.run_name, config=vars(args), mode=args.wandb_mode)
+    run = wandb.init(project=args.wandb_project, name=args.run_name, config=vars(args), mode=args.wandb_mode)
     os.makedirs(args.save_dir, exist_ok=True)   # args.save_dir 已在 main() 里拼成「根目录/数据集/实验名」
 
     start_time = time.time()
@@ -201,10 +204,17 @@ def parse_args():
                         help="wandb 运行模式：online 实时上传到云端（需能联网且已 wandb login）；"
                              "offline 只写本地 ./wandb，之后可 wandb sync 补传。"
                              "也认环境变量 WANDB_MODE，方便在实验脚本里统一开关")
+    parser.add_argument("--wandb_project", type=str, default="easy-llm",
+                        help="W&B 项目名；换数据集时换一个（如 easy-llm-owt），网页端 run 不会和别的数据集混在一起")
     parser.add_argument("--device", type=str, default="auto",
                         help="计算设备：auto 自动挑 cuda/cpu，也可显式写 cuda、cuda:0、cpu")
     parser.add_argument("--amp", action="store_true",
                         help="开启 bf16 混合精度；设备不是 CUDA 时自动忽略")
+    parser.add_argument("--torch_compile", action="store_true",
+                        help="用 torch.compile 编译模型，减少 Python 开销、提升速度（首次编译较慢）")
+    parser.add_argument("--optimizer", type=str, default="adamw", choices=["adamw", "muon"],
+                        help="优化器选择：adamw 全参数走 AdamW；muon 用 Muon 优化 2D 矩阵参数"
+                             "（注意力/FFN 的 Linear），Embedding/llm_head/1D 参数仍走 AdamW")
 
     # 模型超参，默认使用基准值（CS336 Assignment 1, §7.2）
     parser.add_argument("--vocab_size", type=int, default=10000)
@@ -297,10 +307,32 @@ def main():
         tie_embedding=args.tie_embedding,
     ).to(args.device)
 
-    optimizer = AdamW(model.parameters(),
-                      lr=args.max_lr,
-                      betas=(args.beta1, args.beta2),
-                      weight_decay=args.weight_decay)
+    # ---- 优化器：默认全参数走 AdamW；--optimizer muon 时隐藏层矩阵参数交给 Muon，其余走 AdamW ----
+    #   分组边界（Muon 只作用于隐藏层内的 2D 矩阵）：注意力 qkv/输出、FFN w1/w2/w3 这些 Linear 的 w；
+    #   Embedding 的 embed、llm_head.w（输出头，tie 时即 embed）、各层 RMSNorm 的 g 都走 AdamW。
+    #   判据：参数名以 .w 结尾（Linear 权重）且不含 embed / llm_head，打上 is_muon 标记，Muon.step 据此分流。
+    if args.optimizer == "muon":
+        for name, p in model.named_parameters():
+            if name.endswith(".w") and "embed" not in name and "llm_head" not in name:
+                p.is_muon = True
+        optimizer = Muon(
+            model.parameters(),
+            lr=args.max_lr,
+            momentum=0.95,
+            weight_decay=0.0,                  # Muon 自带正交化，不再额外加 wd
+            adamw_betas=(args.beta1, args.beta2),
+            adamw_wd=args.weight_decay,
+        )
+    else:
+        optimizer = AdamW(model.parameters(),
+                          lr=args.max_lr,
+                          betas=(args.beta1, args.beta2),
+                          weight_decay=args.weight_decay)
+
+    # ---- torch.compile：把模型编译成优化的算子图，减少逐算子 Python 开销 ----
+    #   只对 CUDA 生效（CPU 上收益小且编译慢）；消融实验（改了结构）也能用，和编译互不影响
+    if args.torch_compile and args.device.type == "cuda":
+        model = torch.compile(model)
 
     # GradScaler 只在真的要走混合精度时才创建
     scaler = torch.amp.GradScaler(args.device.type, enabled=use_amp) if use_amp else None

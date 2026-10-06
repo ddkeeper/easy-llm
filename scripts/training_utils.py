@@ -166,6 +166,109 @@ class AdamW(torch.optim.Optimizer):
         return loss
 
 
+# Problem 30 补充:  Muon 优化器的实现（2D 矩阵参数专用）
+# 思路：对每个 2D 参数（形状 [d_out, d_in]），在 SGD-momentum 之后不直接沿梯度方向更新，
+#       而是把动量矩阵做 Newton-Schulz 迭代，近似求出它的“正交化”，再缩放回原范数。
+#       这一步能让权重矩阵保持正交、训练更稳，是 modded-nanogpt 里训练提速的关键之一。
+def zeropower_via_newtonschulz5(G: torch.Tensor, steps: int) -> torch.Tensor:
+    '''
+    用 Newton-Schulz 迭代把矩阵 G 近似“正交化”（即求 (G Gᵀ)^(-1/2) G）。
+    G: [d_out, d_in]  任意 2D 矩阵
+    steps: int  迭代次数，5 次即可收敛到足够精度
+    return: 与 G 同形状的正交化矩阵
+    '''
+    assert G.ndim == 2
+    a, b, c = (3.4445, -4.7750, 2.0315)   # 三项系数，让迭代快速收敛
+    X = G.bfloat16()                      # 先降到 bf16，牛顿迭代对精度不敏感，还能提速
+    if X.size(0) > X.size(1):
+        X = X.T                          # 保证行数 ≤ 列数，减少后续矩阵乘的规模
+    X = X / (X.norm() + 1e-7)             # 先做一次归一化，保证初始范数 ≈ 1
+
+    for _ in range(steps):
+        A = X @ X.T
+        B = b * A + c * A @ A            # 合并两项，减少一次矩阵乘
+        X = a * X + B @ X
+
+    if G.size(0) > G.size(1):
+        X = X.T
+    return X
+
+
+class Muon(torch.optim.Optimizer):
+    def __init__(self, params, lr: float = 0.02, momentum: float = 0.95, weight_decay: float = 0.0,
+                 adamw_betas: tuple = (0.9, 0.95), adamw_wd: float = 0.0, eps: float = 1e-8):
+        '''
+        lr: float  学习率（Muon 与内部 AdamW 共用同一个余弦调度值；Muon 比 AdamW 需要更大 lr，可通过 --max_lr 调）
+        momentum: float  SGD-momentum 系数
+        weight_decay: float  权重衰减系数（Muon 本身自带正交化，一般不再加 wd）
+        adamw_betas / adamw_wd: 非 Muon 参数（嵌入、输出头、1D 向量）走 AdamW 用的超参
+        eps: float  AdamW 数值稳定性常数
+
+        分组判据：调用方在传入参数前，给「该走 Muon 的隐藏层矩阵参数」打上 p.is_muon = True 标记；
+        未标记的（Embedding / llm_head / RMSNorm 的 g）一律走内部 AdamW。
+        '''
+        if lr < 0:
+            raise ValueError(f"Invalid learning rate: {lr}")
+        # defaults 同时带上 Muon 和 AdamW 两组字段，同一个 param_groups 里两种参数都取得到自己需要的
+        defaults = {"lr": lr, "momentum": momentum, "weight_decay": weight_decay,
+                    "adamw_betas": adamw_betas, "adamw_wd": adamw_wd, "eps": eps}
+        super().__init__(params, defaults)
+
+    def step(self, closure: Optional[Callable] = None):
+        loss = None if closure is None else closure()
+        for group in self.param_groups:
+            for p in group["params"]:
+                if p.grad is None:
+                    continue
+                if getattr(p, "is_muon", False):
+                    self._muon_step(p, group)      # 隐藏层 2D 矩阵参数：Muon
+                else:
+                    self._adamw_step(p, group)     # 嵌入/输出头/1D 参数：AdamW
+        return loss
+
+    def _muon_step(self, p: torch.Tensor, group: dict) -> None:
+        '''Muon 单参数更新：SGD-momentum + Newton-Schulz 正交化'''
+        lr = group["lr"]
+        momentum = group["momentum"]
+        weight_decay = group["weight_decay"]
+        grad = p.grad.data
+        if weight_decay != 0:
+            grad = grad + weight_decay * p.data     # 把权重衰减并进梯度，等价于 decay
+        state = self.state[p]
+        buf = state.get("momentum_buffer")
+        if buf is None:
+            buf = torch.zeros_like(p.data)          # 首次：动量初始化为 0
+            state["momentum_buffer"] = buf
+        buf.mul_(momentum).add_(grad)               # 一阶动量：SGD with momentum
+        # 先正交化再乘学习率，方向由正交化的动量矩阵决定
+        p.data -= lr * zeropower_via_newtonschulz5(buf, steps=5).to(p.dtype)
+
+    def _adamw_step(self, p: torch.Tensor, group: dict) -> None:
+        '''AdamW 单参数更新（与 Problem 13 的 AdamW 逻辑一致，供非 2D 参数复用）'''
+        lr = group["lr"]
+        beta1, beta2 = group["adamw_betas"]
+        eps = group["eps"]
+        weight_decay = group["adamw_wd"]
+
+        state = self.state[p]
+        t = state.get("t", 0)
+        m = state.get("m", 0)
+        v = state.get("v", 0)
+        grad = p.grad.data
+
+        t += 1
+        p.data -= lr * weight_decay * p.data
+        m_t = beta1 * m + (1 - beta1) * grad
+        v_t = beta2 * v + (1 - beta2) * grad ** 2
+        m_hat = m_t / (1 - beta1 ** t)
+        v_hat = v_t / (1 - beta2 ** t)
+        p.data -= lr * m_hat / (torch.sqrt(v_hat) + eps)
+
+        state["t"] = t
+        state["m"] = m_t
+        state["v"] = v_t
+
+
 # Problem 14:  实现带预热的余弦学习率调度 (1 分)
 def learning_rate_schedule(
     it: int,
