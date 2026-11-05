@@ -18,7 +18,7 @@ class Linear(torch.nn.Module):
         self.w = nn.Parameter(torch.empty(out_features, in_features, device=device, dtype=dtype)) # nn.Linear()
         
 
-        mean, std = 0, 2/(in_features+out_features) ** 0.5
+        mean, std = 0, (2 / (in_features + out_features)) ** 0.5
         nn.init.trunc_normal_(self.w, mean=mean, std=std, a=-3*std, b=3*std)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
